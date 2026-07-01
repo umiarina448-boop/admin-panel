@@ -13,61 +13,85 @@ if($_SESSION['role'] != 'admin'){
     exit;
 }
 
+// ID toko yang datanya ingin ditampilkan
+// Kalau sistemnya multi-toko dan toko aktif disimpan di session (mis. saat memilih toko
+// di ../dashboard.php), ganti baris di bawah ini menjadi:
+// $toko_id = $_SESSION['toko_id'];
+$toko_id = 2;
+
 // Gunakan prepared statement untuk keamanan
-// STATISTIK
-$stmt_produk = $conn->prepare("SELECT COUNT(*) as total FROM products");
+// STATISTIK (semua difilter berdasarkan toko_id)
+$stmt_produk = $conn->prepare("SELECT COUNT(*) as total FROM products WHERE toko_id = ?");
+$stmt_produk->bind_param("i", $toko_id);
 $stmt_produk->execute();
 $total_produk = $stmt_produk->get_result()->fetch_assoc()['total'];
 
-$stmt_customer = $conn->prepare("SELECT COUNT(*) as total FROM users WHERE role = 'customer'");
+// Total customer dihitung dari customer yang pernah order di toko ini
+$stmt_customer = $conn->prepare("
+    SELECT COUNT(DISTINCT u.id) as total 
+    FROM users u
+    JOIN orders o ON o.user_id = u.id
+    WHERE u.role = 'customer' AND o.toko_id = ?
+");
+$stmt_customer->bind_param("i", $toko_id);
 $stmt_customer->execute();
 $total_customer = $stmt_customer->get_result()->fetch_assoc()['total'];
 
-$stmt_pesanan = $conn->prepare("SELECT COUNT(*) as total FROM orders");
+$stmt_pesanan = $conn->prepare("SELECT COUNT(*) as total FROM orders WHERE toko_id = ?");
+$stmt_pesanan->bind_param("i", $toko_id);
 $stmt_pesanan->execute();
 $total_pesanan = $stmt_pesanan->get_result()->fetch_assoc()['total'];
 
-$stmt_pending = $conn->prepare("SELECT COUNT(*) as total FROM orders WHERE status = 'pending'");
+$stmt_pending = $conn->prepare("SELECT COUNT(*) as total FROM orders WHERE status = 'pending' AND toko_id = ?");
+$stmt_pending->bind_param("i", $toko_id);
 $stmt_pending->execute();
 $pesanan_pending = $stmt_pending->get_result()->fetch_assoc()['total'];
 
-$stmt_proses = $conn->prepare("SELECT COUNT(*) as total FROM orders WHERE status = 'proses'");
+$stmt_proses = $conn->prepare("SELECT COUNT(*) as total FROM orders WHERE status = 'proses' AND toko_id = ?");
+$stmt_proses->bind_param("i", $toko_id);
 $stmt_proses->execute();
 $pesanan_proses = $stmt_proses->get_result()->fetch_assoc()['total'];
 
-$stmt_dikirim = $conn->prepare("SELECT COUNT(*) as total FROM orders WHERE status = 'dikirim'");
+$stmt_dikirim = $conn->prepare("SELECT COUNT(*) as total FROM orders WHERE status = 'dikirim' AND toko_id = ?");
+$stmt_dikirim->bind_param("i", $toko_id);
 $stmt_dikirim->execute();
 $pesanan_dikirim = $stmt_dikirim->get_result()->fetch_assoc()['total'];
 
-$stmt_selesai = $conn->prepare("SELECT COUNT(*) as total FROM orders WHERE status = 'selesai'");
+$stmt_selesai = $conn->prepare("SELECT COUNT(*) as total FROM orders WHERE status = 'selesai' AND toko_id = ?");
+$stmt_selesai->bind_param("i", $toko_id);
 $stmt_selesai->execute();
 $pesanan_selesai = $stmt_selesai->get_result()->fetch_assoc()['total'];
 
-$stmt_pendapatan = $conn->prepare("SELECT SUM(total_harga) as total FROM orders WHERE status = 'selesai'");
+$stmt_pendapatan = $conn->prepare("SELECT SUM(total_harga) as total FROM orders WHERE status = 'selesai' AND toko_id = ?");
+$stmt_pendapatan->bind_param("i", $toko_id);
 $stmt_pendapatan->execute();
 $pendapatan = $stmt_pendapatan->get_result()->fetch_assoc();
 $total_pendapatan = $pendapatan['total'] ?? 0;
 
-// Ambil data pesanan terbaru
+// Ambil data pesanan terbaru (toko ini saja)
 $stmt_recent = $conn->prepare("
     SELECT o.*, u.nama as customer_name 
     FROM orders o
     JOIN users u ON o.user_id = u.id
+    WHERE o.toko_id = ?
     ORDER BY o.id DESC
     LIMIT 5
 ");
+$stmt_recent->bind_param("i", $toko_id);
 $stmt_recent->execute();
 $recent_orders = $stmt_recent->get_result();
 
-// Ambil data produk terlaris
+// Ambil data produk terlaris (toko ini saja)
 $stmt_best = $conn->prepare("
     SELECT p.nama_produk, p.gambar, SUM(od.qty) as total_terjual
     FROM order_details od
     JOIN products p ON od.product_id = p.id
+    WHERE p.toko_id = ?
     GROUP BY od.product_id
     ORDER BY total_terjual DESC
     LIMIT 5
 ");
+$stmt_best->bind_param("i", $toko_id);
 $stmt_best->execute();
 $best_products = $stmt_best->get_result();
 ?>

@@ -7,33 +7,16 @@ if(!isset($_SESSION['user_id']) || $_SESSION['role'] != 'admin'){
     exit;
 }
 
-// Ambil statistik toko 1 (app_id=1)
-$toko1_produk = 0;
-$toko1_pesanan = 0;
-$toko1_customer = 0;
+// Ambil statistik toko 1 (toko_id=1)
+$toko1_produk = mysqli_num_rows(mysqli_query($conn, "SELECT * FROM products WHERE toko_id = 1"));
+$toko1_pesanan = mysqli_num_rows(mysqli_query($conn, "SELECT * FROM orders WHERE toko_id = 1"));
 
-// Cek apakah kolom app_id sudah ada
-$cek_kolom = mysqli_query($conn, "SHOW COLUMNS FROM products LIKE 'app_id'");
-if(mysqli_num_rows($cek_kolom) > 0){
-    $toko1_produk = mysqli_num_rows(mysqli_query($conn, "SELECT * FROM products WHERE app_id = 1"));
-    $toko1_pesanan = mysqli_num_rows(mysqli_query($conn, "SELECT * FROM orders WHERE app_id = 1"));
-    $toko1_customer = mysqli_num_rows(mysqli_query($conn, "SELECT * FROM users WHERE app_id = 1 AND role='customer'"));
-} else {
-    $toko1_produk = mysqli_num_rows(mysqli_query($conn, "SELECT * FROM products"));
-    $toko1_pesanan = mysqli_num_rows(mysqli_query($conn, "SELECT * FROM orders"));
-    $toko1_customer = mysqli_num_rows(mysqli_query($conn, "SELECT * FROM users WHERE role='customer'"));
-}
+// Ambil statistik toko 2 (toko_id=2)
+$toko2_produk = mysqli_num_rows(mysqli_query($conn, "SELECT * FROM products WHERE toko_id = 2"));
+$toko2_pesanan = mysqli_num_rows(mysqli_query($conn, "SELECT * FROM orders WHERE toko_id = 2"));
 
-// Ambil statistik toko 2 (app_id=2)
-$toko2_produk = 0;
-$toko2_pesanan = 0;
-$toko2_customer = 0;
-
-if(mysqli_num_rows($cek_kolom) > 0){
-    $toko2_produk = mysqli_num_rows(mysqli_query($conn, "SELECT * FROM products WHERE app_id = 2"));
-    $toko2_pesanan = mysqli_num_rows(mysqli_query($conn, "SELECT * FROM orders WHERE app_id = 2"));
-    $toko2_customer = mysqli_num_rows(mysqli_query($conn, "SELECT * FROM users WHERE app_id = 2 AND role='customer'"));
-}
+// Customer masih 1 tabel bersama (tidak dipisah per toko), sama seperti di toko1/customer.php & toko2/customer.php
+$toko1_customer = $toko2_customer = mysqli_num_rows(mysqli_query($conn, "SELECT * FROM users WHERE role='customer'"));
 ?>
 
 <!DOCTYPE html>

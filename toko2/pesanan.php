@@ -18,7 +18,7 @@ if(isset($_GET['id']) && isset($_GET['status'])){
     $allowed = ['pending', 'proses', 'dikirim', 'selesai', 'batal'];
 
     if(in_array($status, $allowed)){
-        $stmt = $conn->prepare("UPDATE orders SET status = ? WHERE id = ?");
+        $stmt = $conn->prepare("UPDATE orders SET status = ? WHERE id = ? AND toko_id = 2");
         $stmt->bind_param("si", $status, $id);
         $stmt->execute();
     }
@@ -37,15 +37,17 @@ $sql = "
     SELECT o.*, u.nama AS nama_user, u.email, u.no_hp
     FROM orders o
     LEFT JOIN users u ON o.user_id = u.id
-    WHERE 1=1
+    WHERE o.toko_id = 2
 ";
 
 if($search != ''){
-    $sql .= " AND (u.nama LIKE '%$search%' OR o.id LIKE '%$search%')";
+    $search_esc = mysqli_real_escape_string($conn, $search);
+    $sql .= " AND (u.nama LIKE '%$search_esc%' OR o.id LIKE '%$search_esc%')";
 }
 
 if($status_filter != ''){
-    $sql .= " AND o.status = '$status_filter'";
+    $status_filter_esc = mysqli_real_escape_string($conn, $status_filter);
+    $sql .= " AND o.status = '$status_filter_esc'";
 }
 
 $sql .= " ORDER BY o.id DESC";
@@ -56,7 +58,10 @@ $data = mysqli_query($conn, $sql);
 $stats = [];
 $status_list = ['pending', 'proses', 'dikirim', 'selesai', 'batal'];
 foreach($status_list as $st){
-    $result = mysqli_query($conn, "SELECT COUNT(*) as total FROM orders WHERE status = '$st'");
+    $stmt = $conn->prepare("SELECT COUNT(*) as total FROM orders WHERE status = ? AND toko_id = 2");
+    $stmt->bind_param("s", $st);
+    $stmt->execute();
+    $result = $stmt->get_result();
     $stats[$st] = mysqli_fetch_assoc($result)['total'];
 }
 ?>
@@ -66,7 +71,7 @@ foreach($status_list as $st){
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pesanan - Admin AIC Fashion Metro</title>
+    <title>Pesanan - Admin AIC Fashion</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -426,7 +431,7 @@ foreach($status_list as $st){
 <div class="navbar">
     <div class="logo">
         <i class="fa-solid fa-bag-shopping"></i>
-        AIC Fashion Metro Admin
+        AIC Fashion Admin
     </div>
     <div class="nav-menu">
         <a href="dashboard.php">

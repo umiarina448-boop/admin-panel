@@ -47,7 +47,7 @@ if(isset($_POST['simpan'])){
             } else {
                 $gambar = time() . '_' . preg_replace('/[^a-zA-Z0-9._-]/', '', $_FILES['gambar']['name']);
                 $tmp = $_FILES['gambar']['tmp_name'];
-                $folder = "../uploads/";
+                $folder = "/app/uploads/";";
                 
                 if(!file_exists($folder)){
                     mkdir($folder, 0777, true);

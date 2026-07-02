@@ -7,6 +7,9 @@ if(!isset($_SESSION['user_id']) || $_SESSION['role'] != 'admin'){
     exit;
 }
 
+// TOKO AKTIF (file ini khusus Toko 2)
+$toko_id = 2;
+
 // AMBIL KATEGORI
 $kategori = mysqli_query($conn, "SELECT * FROM categories ORDER BY nama_kategori");
 
@@ -67,10 +70,10 @@ if(isset($_POST['simpan'])){
         if(empty($error)){
             // Gunakan prepared statement
             $stmt = $conn->prepare("
-                INSERT INTO products (category_id, nama_produk, deskripsi, harga, stok, gambar, created_at) 
-                VALUES (?, ?, ?, ?, ?, ?, NOW())
+                INSERT INTO products (toko_id, category_id, nama_produk, deskripsi, harga, stok, gambar, created_at) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
             ");
-            $stmt->bind_param("issiis", $category_id, $nama, $deskripsi, $harga, $stok, $gambar);
+            $stmt->bind_param("iissiis", $toko_id, $category_id, $nama, $deskripsi, $harga, $stok, $gambar);
             
             if($stmt->execute()){
                 $success = "Produk berhasil ditambahkan!";
@@ -130,7 +133,6 @@ if(isset($_POST['simpan'])){
             }
         }
 
-        /* HEADER */
         .header {
             background: linear-gradient(135deg, #EE6C4D, #ff8a65);
             padding: 25px 30px;
@@ -151,7 +153,6 @@ if(isset($_POST['simpan'])){
             margin-top: 5px;
         }
 
-        /* FORM BODY */
         .form-body {
             padding: 30px;
         }
@@ -199,7 +200,6 @@ if(isset($_POST['simpan'])){
             min-height: 80px;
         }
 
-        /* FILE UPLOAD */
         .file-upload {
             border: 2px dashed #e0e0e0;
             border-radius: 16px;
@@ -236,7 +236,6 @@ if(isset($_POST['simpan'])){
             display: none;
         }
 
-        /* ALERT */
         .alert-error {
             background: #ffebee;
             color: #c62828;
@@ -261,7 +260,6 @@ if(isset($_POST['simpan'])){
             font-size: 13px;
         }
 
-        /* BUTTON */
         .btn-submit {
             width: 100%;
             padding: 14px;
@@ -326,7 +324,7 @@ if(isset($_POST['simpan'])){
             <i class="fa-solid fa-plus-circle"></i> 
             Tambah Produk Baru
         </h2>
-        <p>Lengkapi form di bawah untuk menambahkan produk</p>
+        <p>Toko 2 - Lengkapi form di bawah untuk menambahkan produk</p>
     </div>
 
     <div class="form-body">
@@ -345,31 +343,26 @@ if(isset($_POST['simpan'])){
         <?php endif; ?>
 
         <form method="POST" enctype="multipart/form-data" id="productForm">
-            <!-- Nama Produk -->
             <div class="form-group">
                 <label><i class="fa-regular fa-tag"></i> Nama Produk</label>
                 <input type="text" name="nama" placeholder="Contoh: Hijab Pashmina Premium" required>
             </div>
 
-            <!-- Deskripsi -->
             <div class="form-group">
                 <label><i class="fa-regular fa-align-left"></i> Deskripsi</label>
                 <textarea name="deskripsi" placeholder="Deskripsikan produk secara lengkap..."></textarea>
             </div>
 
-            <!-- Harga -->
             <div class="form-group">
                 <label><i class="fa-regular fa-money-bill-1"></i> Harga (Rp)</label>
                 <input type="number" name="harga" placeholder="100000" required>
             </div>
 
-            <!-- Stok -->
             <div class="form-group">
                 <label><i class="fa-regular fa-box"></i> Stok</label>
                 <input type="number" name="stok" placeholder="Jumlah stok tersedia" required>
             </div>
 
-            <!-- Kategori -->
             <div class="form-group">
                 <label><i class="fa-regular fa-folder"></i> Kategori</label>
                 <select name="category_id" required>
@@ -382,7 +375,6 @@ if(isset($_POST['simpan'])){
                 </select>
             </div>
 
-            <!-- Upload Gambar -->
             <div class="form-group">
                 <label><i class="fa-regular fa-image"></i> Gambar Produk</label>
                 <div class="file-upload" onclick="document.getElementById('gambarInput').click()">
@@ -408,7 +400,6 @@ if(isset($_POST['simpan'])){
 </div>
 
 <script>
-// Tampilkan nama file yang dipilih
 const fileInput = document.getElementById('gambarInput');
 const fileName = document.getElementById('fileName');
 
@@ -420,7 +411,6 @@ fileInput.addEventListener('change', function() {
     }
 });
 
-// Validasi harga tidak boleh 0
 document.getElementById('productForm').addEventListener('submit', function(e) {
     const harga = document.querySelector('input[name="harga"]').value;
     const stok = document.querySelector('input[name="stok"]').value;

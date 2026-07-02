@@ -17,7 +17,7 @@ if($_SESSION['role'] != 'admin'){
 // Kalau sistemnya multi-toko dan toko aktif disimpan di session (mis. saat memilih toko
 // di ../dashboard.php), ganti baris di bawah ini menjadi:
 // $toko_id = $_SESSION['toko_id'];
-$toko_id = 2;
+$toko_id = 1;
 
 // Gunakan prepared statement untuk keamanan
 // STATISTIK (semua difilter berdasarkan toko_id)

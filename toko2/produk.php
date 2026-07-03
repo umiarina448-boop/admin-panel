@@ -13,32 +13,46 @@ if($_SESSION['role'] != 'admin'){
 }
 
 /* =========================
+   TOKO AKTIF
+   Sesuaikan dengan toko admin panel ini
+========================= */
+$toko_id = 2; // ganti sesuai toko (1 atau 2), atau ambil dari $_SESSION['toko_id'] kalau sistemnya sudah session-based
+
+/* =========================
    HAPUS PRODUK (FIX FK ERROR)
 ========================= */
 if(isset($_GET['hapus'])){
     $id = (int)$_GET['hapus'];
 
-    // Gunakan prepared statement
-    $stmt_size = $conn->prepare("DELETE FROM product_sizes WHERE product_id = ?");
-    $stmt_size->bind_param("i", $id);
-    $stmt_size->execute();
+    // Pastikan produk yang dihapus memang milik toko aktif
+    $stmt_check = $conn->prepare("SELECT id FROM products WHERE id = ? AND toko_id = ?");
+    $stmt_check->bind_param("ii", $id, $toko_id);
+    $stmt_check->execute();
+    $cek = $stmt_check->get_result();
 
-    // ambil gambar
-    $stmt_img = $conn->prepare("SELECT gambar FROM products WHERE id = ?");
-    $stmt_img->bind_param("i", $id);
-    $stmt_img->execute();
-    $dataImg = $stmt_img->get_result()->fetch_assoc();
+    if($cek->num_rows > 0){
+        // Gunakan prepared statement
+        $stmt_size = $conn->prepare("DELETE FROM product_sizes WHERE product_id = ?");
+        $stmt_size->bind_param("i", $id);
+        $stmt_size->execute();
 
-    if($dataImg && $dataImg['gambar']){
-        if(file_exists("../uploads/".$dataImg['gambar'])){
-            unlink("../uploads/".$dataImg['gambar']);
+        // ambil gambar
+        $stmt_img = $conn->prepare("SELECT gambar FROM products WHERE id = ?");
+        $stmt_img->bind_param("i", $id);
+        $stmt_img->execute();
+        $dataImg = $stmt_img->get_result()->fetch_assoc();
+
+        if($dataImg && $dataImg['gambar']){
+            if(file_exists("../uploads/".$dataImg['gambar'])){
+                unlink("../uploads/".$dataImg['gambar']);
+            }
         }
-    }
 
-    // hapus produk
-    $stmt_del = $conn->prepare("DELETE FROM products WHERE id = ?");
-    $stmt_del->bind_param("i", $id);
-    $stmt_del->execute();
+        // hapus produk
+        $stmt_del = $conn->prepare("DELETE FROM products WHERE id = ?");
+        $stmt_del->bind_param("i", $id);
+        $stmt_del->execute();
+    }
 
     header("Location: produk.php");
     exit;
@@ -50,25 +64,35 @@ if(isset($_GET['hapus'])){
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
 $category_filter = isset($_GET['category']) ? (int)$_GET['category'] : 0;
 
-// Query dengan prepared statement
+// Query dengan prepared statement, difilter berdasarkan toko_id
 $sql = "
     SELECT p.*, c.nama_kategori AS kategori
     FROM products p
     LEFT JOIN categories c ON p.category_id = c.id
-    WHERE 1=1
+    WHERE p.toko_id = ?
 ";
 
+$params = [$toko_id];
+$types = "i";
+
 if($search != ''){
-    $sql .= " AND p.nama_produk LIKE '%$search%'";
+    $sql .= " AND p.nama_produk LIKE ?";
+    $params[] = "%$search%";
+    $types .= "s";
 }
 
 if($category_filter > 0){
-    $sql .= " AND p.category_id = $category_filter";
+    $sql .= " AND p.category_id = ?";
+    $params[] = $category_filter;
+    $types .= "i";
 }
 
 $sql .= " ORDER BY p.id DESC";
 
-$data = mysqli_query($conn, $sql);
+$stmt = $conn->prepare($sql);
+$stmt->bind_param($types, ...$params);
+$stmt->execute();
+$data = $stmt->get_result();
 
 // Ambil kategori untuk filter
 $categories = mysqli_query($conn, "SELECT * FROM categories ORDER BY nama_kategori");
@@ -79,7 +103,7 @@ $categories = mysqli_query($conn, "SELECT * FROM categories ORDER BY nama_katego
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kelola Produk - Admin AIC Fashion Metro</title>
+    <title>Kelola Produk - Admin AIC Fashion</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -94,7 +118,6 @@ $categories = mysqli_query($conn, "SELECT * FROM categories ORDER BY nama_katego
             background: #f0f2f5;
         }
 
-        /* ========== TOP NAVBAR ========== */
         .navbar {
             background: white;
             padding: 15px 30px;
@@ -169,12 +192,10 @@ $categories = mysqli_query($conn, "SELECT * FROM categories ORDER BY nama_katego
             color: #EE6C4D;
         }
 
-        /* ========== MAIN CONTENT ========== */
         .container {
             padding: 25px 30px;
         }
 
-        /* HEADER */
         .header {
             display: flex;
             justify-content: space-between;
@@ -214,7 +235,6 @@ $categories = mysqli_query($conn, "SELECT * FROM categories ORDER BY nama_katego
             transform: translateY(-2px);
         }
 
-        /* SEARCH & FILTER */
         .filter-bar {
             background: white;
             padding: 20px;
@@ -292,7 +312,6 @@ $categories = mysqli_query($conn, "SELECT * FROM categories ORDER BY nama_katego
             background: #e0e0e0;
         }
 
-        /* TABLE */
         .table-container {
             background: white;
             border-radius: 20px;
@@ -405,7 +424,6 @@ $categories = mysqli_query($conn, "SELECT * FROM categories ORDER BY nama_katego
             color: #ddd;
         }
 
-        /* RESPONSIVE */
         @media (max-width: 700px) {
             .navbar {
                 flex-direction: column;
@@ -433,7 +451,7 @@ $categories = mysqli_query($conn, "SELECT * FROM categories ORDER BY nama_katego
 <div class="navbar">
     <div class="logo">
         <i class="fa-solid fa-bag-shopping"></i>
-        AIC Fashion Metro Admin
+        AIC Fashion Admin
     </div>
     <div class="nav-menu">
         <a href="dashboard.php">

@@ -75,12 +75,12 @@ if(isset($_POST['update'])){
                 $error = "Ukuran gambar maksimal 2MB";
             } else {
                 // Hapus gambar lama
-                if($gambar && file_exists("../uploads/".$gambar)){
-                    unlink("../uploads/".$gambar);
+                if($gambar && file_exists("/app/uploads/".$gambar)){
+                    unlink("/app/uploads/".$gambar);
                 }
                 
                 $gambar = time() . '_' . preg_replace('/[^a-zA-Z0-9._-]/', '', $_FILES['gambar']['name']);
-                move_uploaded_file($_FILES['gambar']['tmp_name'], "../uploads/".$gambar);
+                move_uploaded_file($_FILES['gambar']['tmp_name'], "/app/uploads/".$gambar);
             }
         }
         
@@ -142,7 +142,7 @@ $list_size = ["S", "M", "L", "XL", "XXL"];
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Edit Produk - Admin AIC Fashion Metro</title>
+    <title>Edit Produk - Admin AIC Fashion</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -183,7 +183,6 @@ $list_size = ["S", "M", "L", "XL", "XXL"];
             }
         }
 
-        /* HEADER */
         .header {
             background: linear-gradient(135deg, #EE6C4D, #ff8a65);
             padding: 25px 30px;
@@ -204,7 +203,6 @@ $list_size = ["S", "M", "L", "XL", "XXL"];
             margin-top: 5px;
         }
 
-        /* FORM BODY */
         .form-body {
             padding: 30px;
         }
@@ -252,7 +250,6 @@ $list_size = ["S", "M", "L", "XL", "XXL"];
             min-height: 80px;
         }
 
-        /* SIZE CHECKBOX */
         .size-group {
             display: flex;
             gap: 15px;
@@ -280,7 +277,6 @@ $list_size = ["S", "M", "L", "XL", "XXL"];
             color: #555;
         }
 
-        /* CURRENT IMAGE */
         .current-image {
             background: #f8f9fa;
             border-radius: 12px;
@@ -305,7 +301,6 @@ $list_size = ["S", "M", "L", "XL", "XXL"];
             color: #666;
         }
 
-        /* FILE UPLOAD */
         .file-upload {
             border: 2px dashed #e0e0e0;
             border-radius: 16px;
@@ -342,7 +337,6 @@ $list_size = ["S", "M", "L", "XL", "XXL"];
             display: none;
         }
 
-        /* ALERT */
         .alert-error {
             background: #ffebee;
             color: #c62828;
@@ -367,7 +361,6 @@ $list_size = ["S", "M", "L", "XL", "XXL"];
             font-size: 13px;
         }
 
-        /* BUTTON */
         .btn-submit {
             width: 100%;
             padding: 14px;
@@ -454,31 +447,26 @@ $list_size = ["S", "M", "L", "XL", "XXL"];
         <?php endif; ?>
 
         <form method="POST" enctype="multipart/form-data" id="productForm">
-            <!-- Nama Produk -->
             <div class="form-group">
                 <label><i class="fa-regular fa-tag"></i> Nama Produk</label>
                 <input type="text" name="nama" value="<?php echo htmlspecialchars($produk['nama_produk']); ?>" required>
             </div>
 
-            <!-- Deskripsi -->
             <div class="form-group">
                 <label><i class="fa-regular fa-align-left"></i> Deskripsi</label>
                 <textarea name="deskripsi" placeholder="Deskripsikan produk secara lengkap..."><?php echo htmlspecialchars($produk['deskripsi'] ?? ''); ?></textarea>
             </div>
 
-            <!-- Harga -->
             <div class="form-group">
                 <label><i class="fa-regular fa-money-bill-1"></i> Harga (Rp)</label>
                 <input type="number" name="harga" value="<?php echo $produk['harga']; ?>" required>
             </div>
 
-            <!-- Stok -->
             <div class="form-group">
                 <label><i class="fa-regular fa-box"></i> Stok</label>
                 <input type="number" name="stok" value="<?php echo $produk['stok']; ?>" required>
             </div>
 
-            <!-- Size -->
             <div class="form-group">
                 <label><i class="fa-regular fa-ruler"></i> Ukuran (Size)</label>
                 <div class="size-group">
@@ -493,7 +481,6 @@ $list_size = ["S", "M", "L", "XL", "XXL"];
                 <small style="color:#999; font-size:11px;">Centang ukuran yang tersedia</small>
             </div>
 
-            <!-- Kategori -->
             <div class="form-group">
                 <label><i class="fa-regular fa-folder"></i> Kategori</label>
                 <select name="category_id" required>
@@ -506,7 +493,6 @@ $list_size = ["S", "M", "L", "XL", "XXL"];
                 </select>
             </div>
 
-            <!-- Gambar Saat Ini -->
             <div class="form-group">
                 <label><i class="fa-regular fa-image"></i> Gambar Saat Ini</label>
                 <div class="current-image">
@@ -517,7 +503,6 @@ $list_size = ["S", "M", "L", "XL", "XXL"];
                 </div>
             </div>
 
-            <!-- Upload Gambar Baru -->
             <div class="form-group">
                 <label><i class="fa-regular fa-cloud-arrow-up"></i> Ganti Gambar (Opsional)</label>
                 <div class="file-upload" onclick="document.getElementById('gambarInput').click()">
@@ -543,7 +528,6 @@ $list_size = ["S", "M", "L", "XL", "XXL"];
 </div>
 
 <script>
-// Tampilkan nama file yang dipilih
 const fileInput = document.getElementById('gambarInput');
 const fileName = document.getElementById('fileName');
 
@@ -555,7 +539,6 @@ fileInput.addEventListener('change', function() {
     }
 });
 
-// Validasi form
 document.getElementById('productForm').addEventListener('submit', function(e) {
     const harga = document.querySelector('input[name="harga"]').value;
     const stok = document.querySelector('input[name="stok"]').value;

@@ -15,98 +15,63 @@ if($_SESSION['role'] != 'admin'){
 
 $toko_id = 2;
 
-// ==============================
-// FILTER TANGGAL
-// ==============================
-$tanggal_mulai = isset($_GET['tanggal_mulai']) ? trim($_GET['tanggal_mulai']) : '';
-$tanggal_selesai = isset($_GET['tanggal_selesai']) ? trim($_GET['tanggal_selesai']) : '';
-
-$filter_tanggal_sql = "";
-if($tanggal_mulai != '' && $tanggal_selesai != ''){
-    $filter_tanggal_sql = " AND DATE(created_at) BETWEEN ? AND ? ";
-}
-
-// STATISTIK PRODUK (tidak ada filter tanggal, produk tidak punya tanggal transaksi)
+// STATISTIK PRODUK
 $stmt_produk = $conn->prepare("SELECT COUNT(*) as total FROM products WHERE toko_id = ?");
 $stmt_produk->bind_param("i", $toko_id);
 $stmt_produk->execute();
 $total_produk = $stmt_produk->get_result()->fetch_assoc()['total'];
 
-// Total customer (unik) — ikut filter tanggal berdasarkan order
-$sql_customer = "
+// Total customer (unik)
+$stmt_customer = $conn->prepare("
     SELECT COUNT(DISTINCT u.id) as total 
     FROM users u
     JOIN orders o ON o.user_id = u.id
-    WHERE u.role = 'customer' AND o.toko_id = ?" . $filter_tanggal_sql;
-$stmt_customer = $conn->prepare($sql_customer);
-if($filter_tanggal_sql != ""){
-    $stmt_customer->bind_param("iss", $toko_id, $tanggal_mulai, $tanggal_selesai);
-} else {
-    $stmt_customer->bind_param("i", $toko_id);
-}
+    WHERE u.role = 'customer' AND o.toko_id = ?
+");
+$stmt_customer->bind_param("i", $toko_id);
 $stmt_customer->execute();
 $total_customer = $stmt_customer->get_result()->fetch_assoc()['total'];
 
 // Total pesanan
-$sql_pesanan = "SELECT COUNT(*) as total FROM orders WHERE toko_id = ?" . $filter_tanggal_sql;
-$stmt_pesanan = $conn->prepare($sql_pesanan);
-if($filter_tanggal_sql != ""){
-    $stmt_pesanan->bind_param("iss", $toko_id, $tanggal_mulai, $tanggal_selesai);
-} else {
-    $stmt_pesanan->bind_param("i", $toko_id);
-}
+$stmt_pesanan = $conn->prepare("SELECT COUNT(*) as total FROM orders WHERE toko_id = ?");
+$stmt_pesanan->bind_param("i", $toko_id);
 $stmt_pesanan->execute();
 $total_pesanan = $stmt_pesanan->get_result()->fetch_assoc()['total'];
 
-// Fungsi bantu untuk hitung jumlah pesanan per status (dengan filter tanggal)
-function hitungStatus($conn, $toko_id, $status, $filter_tanggal_sql, $tanggal_mulai, $tanggal_selesai){
-    $sql = "SELECT COUNT(*) as total FROM orders WHERE status = ? AND toko_id = ?" . $filter_tanggal_sql;
-    $stmt = $conn->prepare($sql);
-    if($filter_tanggal_sql != ""){
-        $stmt->bind_param("siss", $status, $toko_id, $tanggal_mulai, $tanggal_selesai);
-    } else {
-        $stmt->bind_param("si", $status, $toko_id);
-    }
+// Fungsi bantu untuk hitung jumlah pesanan per status
+function hitungStatus($conn, $toko_id, $status){
+    $stmt = $conn->prepare("SELECT COUNT(*) as total FROM orders WHERE status = ? AND toko_id = ?");
+    $stmt->bind_param("si", $status, $toko_id);
     $stmt->execute();
     return $stmt->get_result()->fetch_assoc()['total'];
 }
 
-$pesanan_pending = hitungStatus($conn, $toko_id, 'pending', $filter_tanggal_sql, $tanggal_mulai, $tanggal_selesai);
-$pesanan_proses = hitungStatus($conn, $toko_id, 'proses', $filter_tanggal_sql, $tanggal_mulai, $tanggal_selesai);
-$pesanan_dikirim = hitungStatus($conn, $toko_id, 'dikirim', $filter_tanggal_sql, $tanggal_mulai, $tanggal_selesai);
-$pesanan_selesai = hitungStatus($conn, $toko_id, 'selesai', $filter_tanggal_sql, $tanggal_mulai, $tanggal_selesai);
+$pesanan_pending = hitungStatus($conn, $toko_id, 'pending');
+$pesanan_proses = hitungStatus($conn, $toko_id, 'proses');
+$pesanan_dikirim = hitungStatus($conn, $toko_id, 'dikirim');
+$pesanan_selesai = hitungStatus($conn, $toko_id, 'selesai');
 
 // PENDAPATAN (hanya status selesai)
-$sql_pendapatan = "SELECT SUM(total_harga) as total FROM orders WHERE status = 'selesai' AND toko_id = ?" . $filter_tanggal_sql;
-$stmt_pendapatan = $conn->prepare($sql_pendapatan);
-if($filter_tanggal_sql != ""){
-    $stmt_pendapatan->bind_param("iss", $toko_id, $tanggal_mulai, $tanggal_selesai);
-} else {
-    $stmt_pendapatan->bind_param("i", $toko_id);
-}
+$stmt_pendapatan = $conn->prepare("SELECT SUM(total_harga) as total FROM orders WHERE status = 'selesai' AND toko_id = ?");
+$stmt_pendapatan->bind_param("i", $toko_id);
 $stmt_pendapatan->execute();
 $pendapatan = $stmt_pendapatan->get_result()->fetch_assoc();
 $total_pendapatan = $pendapatan['total'] ?? 0;
 
-// Pesanan terbaru (ikut filter tanggal)
-$sql_recent = "
+// Pesanan terbaru
+$stmt_recent = $conn->prepare("
     SELECT o.*, u.nama as customer_name 
     FROM orders o
     JOIN users u ON o.user_id = u.id
-    WHERE o.toko_id = ?" . $filter_tanggal_sql . "
+    WHERE o.toko_id = ?
     ORDER BY o.id DESC
     LIMIT 5
-";
-$stmt_recent = $conn->prepare($sql_recent);
-if($filter_tanggal_sql != ""){
-    $stmt_recent->bind_param("iss", $toko_id, $tanggal_mulai, $tanggal_selesai);
-} else {
-    $stmt_recent->bind_param("i", $toko_id);
-}
+");
+$stmt_recent->bind_param("i", $toko_id);
 $stmt_recent->execute();
 $recent_orders = $stmt_recent->get_result();
 
-// Produk terlaris (tidak difilter tanggal, tetap semua waktu)
+// Produk terlaris
 $stmt_best = $conn->prepare("
     SELECT p.nama_produk, p.gambar, SUM(od.qty) as total_terjual
     FROM order_details od
@@ -251,84 +216,6 @@ $best_products = $stmt_best->get_result();
             font-weight: 500;
             color: #555;
             font-size: 14px;
-        }
-
-        /* FILTER BAR */
-        .filter-bar {
-            background: white;
-            padding: 18px 22px;
-            border-radius: 16px;
-            margin-bottom: 25px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-            display: flex;
-            gap: 15px;
-            align-items: flex-end;
-            flex-wrap: wrap;
-        }
-
-        .filter-group {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-
-        .filter-group label {
-            font-size: 12px;
-            font-weight: 600;
-            color: #555;
-        }
-
-        .filter-group input {
-            padding: 10px 15px;
-            border: 1.5px solid #e0e0e0;
-            border-radius: 12px;
-            font-size: 13px;
-            outline: none;
-            font-family: 'Poppins', sans-serif;
-        }
-
-        .filter-group input:focus {
-            border-color: #EE6C4D;
-        }
-
-        .btn-filter {
-            background: #EE6C4D;
-            color: white;
-            border: none;
-            padding: 11px 22px;
-            border-radius: 12px;
-            font-size: 13px;
-            font-weight: 600;
-            cursor: pointer;
-        }
-
-        .btn-reset-filter {
-            background: #f0f0f0;
-            color: #666;
-            text-decoration: none;
-            padding: 11px 18px;
-            border-radius: 12px;
-            font-size: 13px;
-            font-weight: 500;
-            display: inline-flex;
-            align-items: center;
-        }
-
-        .btn-export {
-            background: #2ecc71;
-            color: white;
-            text-decoration: none;
-            padding: 11px 22px;
-            border-radius: 12px;
-            font-size: 13px;
-            font-weight: 600;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .btn-export:hover {
-            background: #27ae60;
         }
 
         .cards-row {
@@ -579,10 +466,6 @@ $best_products = $stmt_best->get_result();
             .header h1 {
                 font-size: 20px;
             }
-            .filter-bar {
-                flex-direction: column;
-                align-items: stretch;
-            }
         }
     </style>
 </head>
@@ -647,29 +530,6 @@ $best_products = $stmt_best->get_result();
             <span style="color: #2ecc71;">Admin</span>
         </div>
     </div>
-
-    <!-- FILTER TANGGAL + EXPORT -->
-    <form method="GET" class="filter-bar">
-        <div class="filter-group">
-            <label><i class="fa-regular fa-calendar"></i> Dari Tanggal</label>
-            <input type="date" name="tanggal_mulai" value="<?php echo htmlspecialchars($tanggal_mulai); ?>">
-        </div>
-        <div class="filter-group">
-            <label><i class="fa-regular fa-calendar"></i> Sampai Tanggal</label>
-            <input type="date" name="tanggal_selesai" value="<?php echo htmlspecialchars($tanggal_selesai); ?>">
-        </div>
-        <button type="submit" class="btn-filter">
-            <i class="fa-solid fa-filter"></i> Filter
-        </button>
-        <?php if($tanggal_mulai != '' || $tanggal_selesai != ''): ?>
-            <a href="dashboard.php" class="btn-reset-filter">
-                <i class="fa-solid fa-rotate-left"></i> Reset
-            </a>
-        <?php endif; ?>
-        <a href="export_excel.php?tanggal_mulai=<?php echo urlencode($tanggal_mulai); ?>&tanggal_selesai=<?php echo urlencode($tanggal_selesai); ?>" class="btn-export">
-            <i class="fa-solid fa-file-excel"></i> Export ke Excel
-        </a>
-    </form>
 
     <!-- BARIS 1: STATISTIK UTAMA -->
     <div class="cards-row">

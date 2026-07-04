@@ -7,16 +7,59 @@ if(!isset($_SESSION['user_id']) || $_SESSION['role'] != 'admin'){
     exit;
 }
 
-// Ambil statistik toko 1 (toko_id=1)
+// ==============================
+// FILTER TANGGAL PENDAPATAN
+// ==============================
+$tanggal_mulai = isset($_GET['tanggal_mulai']) ? trim($_GET['tanggal_mulai']) : '';
+$tanggal_selesai = isset($_GET['tanggal_selesai']) ? trim($_GET['tanggal_selesai']) : '';
+
+// Bangun kondisi tanggal untuk prepared statement
+$filter_tanggal = "";
+$params = [];
+$types = "";
+
+if($tanggal_mulai != '' && $tanggal_selesai != ''){
+    $filter_tanggal = " AND DATE(created_at) BETWEEN ? AND ? ";
+    $params[] = $tanggal_mulai;
+    $params[] = $tanggal_selesai;
+    $types = "ss";
+}
+
+// ==============================
+// STATISTIK PRODUK & PESANAN (existing)
+// ==============================
 $toko1_produk = mysqli_num_rows(mysqli_query($conn, "SELECT * FROM products WHERE toko_id = 1"));
 $toko1_pesanan = mysqli_num_rows(mysqli_query($conn, "SELECT * FROM orders WHERE toko_id = 1"));
 
-// Ambil statistik toko 2 (toko_id=2)
 $toko2_produk = mysqli_num_rows(mysqli_query($conn, "SELECT * FROM products WHERE toko_id = 2"));
 $toko2_pesanan = mysqli_num_rows(mysqli_query($conn, "SELECT * FROM orders WHERE toko_id = 2"));
 
-// Customer masih 1 tabel bersama (tidak dipisah per toko), sama seperti di toko1/customer.php & toko2/customer.php
 $toko1_customer = $toko2_customer = mysqli_num_rows(mysqli_query($conn, "SELECT * FROM users WHERE role='customer'"));
+
+// ==============================
+// PENDAPATAN PER TOKO (hanya order status 'selesai')
+// ==============================
+function getPendapatan($conn, $toko_id, $filter_tanggal, $params, $types){
+    $sql = "SELECT COALESCE(SUM(total_harga), 0) as total 
+            FROM orders 
+            WHERE toko_id = ? AND status = 'selesai' " . $filter_tanggal;
+    
+    $stmt = $conn->prepare($sql);
+    
+    if($filter_tanggal != ""){
+        $stmt->bind_param("i" . $types, $toko_id, ...$params);
+    } else {
+        $stmt->bind_param("i", $toko_id);
+    }
+    
+    $stmt->execute();
+    $result = $stmt->get_result()->fetch_assoc();
+    return $result['total'] ?? 0;
+}
+
+$toko1_pendapatan = getPendapatan($conn, 1, $filter_tanggal, $params, $types);
+$toko2_pendapatan = getPendapatan($conn, 2, $filter_tanggal, $params, $types);
+$total_pendapatan = $toko1_pendapatan + $toko2_pendapatan;
 ?>
 
 <!DOCTYPE html>
@@ -54,7 +97,7 @@ $toko1_customer = $toko2_customer = mysqli_num_rows(mysqli_query($conn, "SELECT 
             background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
             padding: 25px 35px;
             border-radius: 24px;
-            margin-bottom: 35px;
+            margin-bottom: 25px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -102,6 +145,105 @@ $toko1_customer = $toko2_customer = mysqli_num_rows(mysqli_query($conn, "SELECT 
             background: #f44336;
             border-color: #f44336;
             transform: translateY(-2px);
+        }
+
+        /* ===== FILTER TANGGAL ===== */
+        .filter-bar {
+            background: white;
+            padding: 20px 25px;
+            border-radius: 20px;
+            margin-bottom: 25px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.06);
+            display: flex;
+            gap: 15px;
+            align-items: flex-end;
+            flex-wrap: wrap;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .filter-group label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .filter-group input {
+            padding: 10px 15px;
+            border: 1.5px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 13px;
+            outline: none;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .filter-group input:focus {
+            border-color: #EE6C4D;
+        }
+
+        .btn-filter {
+            background: #EE6C4D;
+            color: white;
+            border: none;
+            padding: 11px 24px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .btn-reset-filter {
+            background: #f0f0f0;
+            color: #666;
+            text-decoration: none;
+            padding: 11px 20px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        /* ===== TOTAL PENDAPATAN BANNER ===== */
+        .total-pendapatan {
+            background: linear-gradient(135deg, #11998e, #38ef7d);
+            padding: 25px 30px;
+            border-radius: 20px;
+            margin-bottom: 25px;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            box-shadow: 0 10px 30px rgba(17,153,142,0.25);
+        }
+
+        .total-pendapatan .label {
+            font-size: 14px;
+            opacity: 0.9;
+            font-weight: 500;
+        }
+
+        .total-pendapatan .value {
+            font-size: 32px;
+            font-weight: 700;
+            margin-top: 5px;
+        }
+
+        .total-pendapatan .icon {
+            width: 60px;
+            height: 60px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 26px;
         }
 
         /* ===== SUBTITLE ===== */
@@ -197,6 +339,30 @@ $toko1_customer = $toko2_customer = mysqli_num_rows(mysqli_query($conn, "SELECT 
             color: #999;
             margin-bottom: 15px;
             font-weight: 400;
+        }
+
+        /* ===== PENDAPATAN TOKO ===== */
+        .pendapatan-toko {
+            background: #f0fdf9;
+            border: 1.5px solid #b8f0dd;
+            border-radius: 14px;
+            padding: 12px;
+            margin-bottom: 15px;
+        }
+
+        .pendapatan-toko .label {
+            font-size: 11px;
+            color: #11998e;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .pendapatan-toko .value {
+            font-size: 20px;
+            font-weight: 700;
+            color: #0d7a70;
+            margin-top: 4px;
         }
 
         /* ===== STATS ===== */
@@ -298,6 +464,16 @@ $toko1_customer = $toko2_customer = mysqli_num_rows(mysqli_query($conn, "SELECT 
             .toko-stats {
                 grid-template-columns: repeat(3, 1fr);
             }
+
+            .filter-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .total-pendapatan {
+                flex-direction: column;
+                text-align: center;
+            }
         }
 
         @media (max-width: 480px) {
@@ -339,6 +515,41 @@ $toko1_customer = $toko2_customer = mysqli_num_rows(mysqli_query($conn, "SELECT 
         </div>
     </div>
 
+    <!-- FILTER TANGGAL PENDAPATAN -->
+    <form method="GET" class="filter-bar">
+        <div class="filter-group">
+            <label><i class="fa-regular fa-calendar"></i> Dari Tanggal</label>
+            <input type="date" name="tanggal_mulai" value="<?php echo htmlspecialchars($tanggal_mulai); ?>">
+        </div>
+        <div class="filter-group">
+            <label><i class="fa-regular fa-calendar"></i> Sampai Tanggal</label>
+            <input type="date" name="tanggal_selesai" value="<?php echo htmlspecialchars($tanggal_selesai); ?>">
+        </div>
+        <button type="submit" class="btn-filter">
+            <i class="fa-solid fa-filter"></i> Filter Pendapatan
+        </button>
+        <?php if($tanggal_mulai != '' || $tanggal_selesai != ''): ?>
+            <a href="index.php" class="btn-reset-filter">
+                <i class="fa-solid fa-rotate-left"></i> Reset
+            </a>
+        <?php endif; ?>
+    </form>
+
+    <!-- TOTAL PENDAPATAN SELURUH TOKO -->
+    <div class="total-pendapatan">
+        <div>
+            <div class="label">
+                <?php echo ($tanggal_mulai && $tanggal_selesai) 
+                    ? "Total Pendapatan (" . htmlspecialchars($tanggal_mulai) . " s/d " . htmlspecialchars($tanggal_selesai) . ")" 
+                    : "Total Pendapatan Keseluruhan (Semua Waktu)"; ?>
+            </div>
+            <div class="value">Rp <?php echo number_format($total_pendapatan, 0, ',', '.'); ?></div>
+        </div>
+        <div class="icon">
+            <i class="fa-solid fa-sack-dollar"></i>
+        </div>
+    </div>
+
     <p class="subtitle">
         <i class="fa-regular fa-compass"></i> Pilih toko yang ingin Anda kelola
     </p>
@@ -349,6 +560,11 @@ $toko1_customer = $toko2_customer = mysqli_num_rows(mysqli_query($conn, "SELECT 
             <div class="toko-icon">🛍</div>
             <div class="toko-title">AIC Fashion</div>
             <div class="toko-subtitle">Toko 1</div>
+
+            <div class="pendapatan-toko">
+                <div class="label">Pendapatan Toko 1</div>
+                <div class="value">Rp <?php echo number_format($toko1_pendapatan, 0, ',', '.'); ?></div>
+            </div>
 
             <div class="toko-stats">
                 <div class="stat-item">
@@ -375,6 +591,11 @@ $toko1_customer = $toko2_customer = mysqli_num_rows(mysqli_query($conn, "SELECT 
             <div class="toko-icon">🏬</div>
             <div class="toko-title">AIC Fashion Metro</div>
             <div class="toko-subtitle">Toko 2</div>
+
+            <div class="pendapatan-toko">
+                <div class="label">Pendapatan Toko 2</div>
+                <div class="value">Rp <?php echo number_format($toko2_pendapatan, 0, ',', '.'); ?></div>
+            </div>
 
             <div class="toko-stats">
                 <div class="stat-item">

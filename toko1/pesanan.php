@@ -54,6 +54,70 @@ $sql .= " ORDER BY o.id DESC";
 
 $data = mysqli_query($conn, $sql);
 
+/* =========================
+   EXPORT KE EXCEL (jika ?export=1)
+========================= */
+if(isset($_GET['export']) && $_GET['export'] == '1'){
+
+    $status_label_map = [
+        'pending' => 'Menunggu',
+        'proses' => 'Diproses',
+        'dikirim' => 'Dikirim',
+        'selesai' => 'Selesai',
+        'batal' => 'Dibatalkan'
+    ];
+
+    $filter_label = $status_filter != '' ? "_" . $status_filter : "_semua_status";
+    $filename = "laporan_pesanan_toko1" . $filter_label . ".xls";
+
+    header("Content-Type: application/vnd.ms-excel; charset=UTF-8");
+    header("Content-Disposition: attachment; filename=\"$filename\"");
+    header("Pragma: no-cache");
+    header("Expires: 0");
+    ?>
+    <table border="1">
+        <tr>
+            <th colspan="6" style="font-size:16px; font-weight:bold;">
+                Laporan Pesanan - Toko 1
+                <?php if($search != ''): ?>
+                    (Pencarian: <?php echo htmlspecialchars($search); ?>)
+                <?php endif; ?>
+                <?php if($status_filter != ''): ?>
+                    (Status: <?php echo htmlspecialchars($status_label_map[$status_filter] ?? $status_filter); ?>)
+                <?php endif; ?>
+            </th>
+        </tr>
+        <tr><td colspan="6"></td></tr>
+        <tr>
+            <th>ID Order</th>
+            <th>Customer</th>
+            <th>Email</th>
+            <th>No HP</th>
+            <th>Total Harga</th>
+            <th>Status</th>
+        </tr>
+        <?php if(mysqli_num_rows($data) > 0): ?>
+            <?php while($row = mysqli_fetch_assoc($data)): 
+                $status_export = $row['status'] ?? 'pending';
+                $status_label_export = $status_label_map[$status_export] ?? ucfirst($status_export);
+            ?>
+            <tr>
+                <td>#<?php echo str_pad($row['id'], 6, '0', STR_PAD_LEFT); ?></td>
+                <td><?php echo htmlspecialchars($row['nama_user'] ?? 'Unknown'); ?></td>
+                <td><?php echo htmlspecialchars($row['email'] ?? ''); ?></td>
+                <td><?php echo htmlspecialchars($row['no_hp'] ?? ''); ?></td>
+                <td><?php echo $row['total_harga']; ?></td>
+                <td><?php echo $status_label_export; ?></td>
+            </tr>
+            <?php endwhile; ?>
+        <?php else: ?>
+            <tr><td colspan="6">Tidak ada data</td></tr>
+        <?php endif; ?>
+    </table>
+    <?php
+    exit;
+}
+
 // Hitung statistik per status
 $stats = [];
 $status_list = ['pending', 'proses', 'dikirim', 'selesai', 'batal'];
@@ -300,6 +364,23 @@ foreach($status_list as $st){
             gap: 8px;
         }
 
+        .export-btn {
+            background: #2ecc71;
+            color: white;
+            text-decoration: none;
+            padding: 12px 22px;
+            border-radius: 40px;
+            font-size: 14px;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .export-btn:hover {
+            background: #27ae60;
+        }
+
         /* TABLE */
         .table-container {
             background: white;
@@ -515,6 +596,9 @@ foreach($status_list as $st){
                 <i class="fa-solid fa-rotate-left"></i> Reset
             </a>
         <?php endif; ?>
+        <a href="pesanan.php?export=1&search=<?php echo urlencode($search); ?>&status_filter=<?php echo urlencode($status_filter); ?>" class="export-btn">
+            <i class="fa-solid fa-file-excel"></i> Export ke Excel
+        </a>
     </form>
 
     <!-- TABLE PESANAN -->

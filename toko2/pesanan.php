@@ -58,7 +58,7 @@ $data = mysqli_query($conn, $sql);
 /* =========================
    EXPORT KE EXCEL (jika ?export=1)
 ========================= */
-if(isset($_GET['export']) && $_GET['export'] == '1'){
+if(isset($_GET['export']) && $_GET['export'] == '2'){
 
     $status_label_map = [
         'pending' => 'Menunggu',

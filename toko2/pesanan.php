@@ -38,7 +38,7 @@ $sql = "
     SELECT o.*, u.nama AS nama_user, u.email, u.no_hp
     FROM orders o
     LEFT JOIN users u ON o.user_id = u.id
-    WHERE o.toko_id = 1
+    WHERE o.toko_id = 2
 ";
 
 if($search != ''){
@@ -123,7 +123,7 @@ if(isset($_GET['export']) && $_GET['export'] == '2'){
 $stats = [];
 $status_list = ['pending', 'proses', 'dikirim', 'selesai', 'batal'];
 foreach($status_list as $st){
-    $stmt = $conn->prepare("SELECT COUNT(*) as total FROM orders WHERE status = ? AND toko_id = 1");
+    $stmt = $conn->prepare("SELECT COUNT(*) as total FROM orders WHERE status = ? AND toko_id = 2");
     $stmt->bind_param("s", $st);
     $stmt->execute();
     $result = $stmt->get_result();

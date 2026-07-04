@@ -18,8 +18,7 @@ if(isset($_GET['id']) && isset($_GET['status'])){
     $allowed = ['pending', 'proses', 'dikirim', 'selesai', 'batal'];
 
     if(in_array($status, $allowed)){
-        $stmt = $conn->prepare("UPDATE orders SET status = ? WHERE id = ? AND toko_id = 2
-        ");
+        $stmt = $conn->prepare("UPDATE orders SET status = ? WHERE id = ? AND toko_id = 2");
         $stmt->bind_param("si", $status, $id);
         $stmt->execute();
     }
@@ -58,7 +57,7 @@ $data = mysqli_query($conn, $sql);
 /* =========================
    EXPORT KE EXCEL (jika ?export=1)
 ========================= */
-if(isset($_GET['export']) && $_GET['export'] == '2'){
+if(isset($_GET['export']) && $_GET['export'] == '1'){
 
     $status_label_map = [
         'pending' => 'Menunggu',
@@ -69,7 +68,7 @@ if(isset($_GET['export']) && $_GET['export'] == '2'){
     ];
 
     $filter_label = $status_filter != '' ? "_" . $status_filter : "_semua_status";
-    $filename = "laporan_pesanan_toko1" . $filter_label . ".xls";
+    $filename = "laporan_pesanan_toko2" . $filter_label . ".xls";
 
     header("Content-Type: application/vnd.ms-excel; charset=UTF-8");
     header("Content-Disposition: attachment; filename=\"$filename\"");
@@ -79,7 +78,7 @@ if(isset($_GET['export']) && $_GET['export'] == '2'){
     <table border="1">
         <tr>
             <th colspan="6" style="font-size:16px; font-weight:bold;">
-                Laporan Pesanan - Toko 1
+                Laporan Pesanan - Toko 2
                 <?php if($search != ''): ?>
                     (Pencarian: <?php echo htmlspecialchars($search); ?>)
                 <?php endif; ?>
@@ -136,7 +135,7 @@ foreach($status_list as $st){
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pesanan - Admin AIC Fashion</title>
+    <title>Pesanan - Admin AIC Fashion Metro</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -172,7 +171,7 @@ foreach($status_list as $st){
             display: flex;
             align-items: center;
             gap: 8px;
-            color: #EE6C4D;
+            color: #2196f3;
         }
 
         .logo i {
@@ -204,12 +203,12 @@ foreach($status_list as $st){
         }
 
         .nav-menu a:hover {
-            background: #fff5f2;
-            color: #EE6C4D;
+            background: #e3f2fd;
+            color: #2196f3;
         }
 
         .nav-menu a.active {
-            background: #EE6C4D;
+            background: #2196f3;
             color: white;
         }
 
@@ -223,7 +222,7 @@ foreach($status_list as $st){
         }
 
         .admin-info i {
-            color: #EE6C4D;
+            color: #2196f3;
         }
 
         /* ========== MAIN CONTENT ========== */
@@ -248,7 +247,7 @@ foreach($status_list as $st){
         }
 
         .header h2 i {
-            color: #EE6C4D;
+            color: #2196f3;
             margin-right: 10px;
         }
 
@@ -331,7 +330,7 @@ foreach($status_list as $st){
         }
 
         .search-box input:focus {
-            border-color: #EE6C4D;
+            border-color: #2196f3;
         }
 
         .filter-box select {
@@ -344,7 +343,7 @@ foreach($status_list as $st){
         }
 
         .filter-btn {
-            background: #EE6C4D;
+            background: #2196f3;
             color: white;
             border: none;
             padding: 12px 24px;
@@ -512,8 +511,8 @@ foreach($status_list as $st){
 <!-- TOP NAVBAR -->
 <div class="navbar">
     <div class="logo">
-        <i class="fa-solid fa-bag-shopping"></i>
-        AIC Fashion Admin
+        <i class="fa-solid fa-shop"></i>
+        AIC Fashion Metro Admin
     </div>
     <div class="nav-menu">
         <a href="dashboard.php">

@@ -18,7 +18,8 @@ if(isset($_GET['id']) && isset($_GET['status'])){
     $allowed = ['pending', 'proses', 'dikirim', 'selesai', 'batal'];
 
     if(in_array($status, $allowed)){
-        $stmt = $conn->prepare("UPDATE orders SET status = ? WHERE id = ? AND toko_id = 1");
+        $stmt = $conn->prepare("UPDATE orders SET status = ? WHERE id = ? AND toko_id = 2
+        ");
         $stmt->bind_param("si", $status, $id);
         $stmt->execute();
     }

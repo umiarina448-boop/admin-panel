@@ -60,6 +60,128 @@ function getPendapatan($conn, $toko_id, $filter_tanggal, $params, $types){
 $toko1_pendapatan = getPendapatan($conn, 1, $filter_tanggal, $params, $types);
 $toko2_pendapatan = getPendapatan($conn, 2, $filter_tanggal, $params, $types);
 $total_pendapatan = $toko1_pendapatan + $toko2_pendapatan;
+
+// ==============================
+// EXPORT KE EXCEL (jika ?export=1)
+// ==============================
+if(isset($_GET['export']) && $_GET['export'] == '1'){
+
+    function getDetailOrders($conn, $toko_id, $filter_tanggal, $params, $types){
+        $sql = "SELECT o.id, u.nama as customer_name, o.total_harga, o.status, o.created_at, o.metode_pembayaran
+                FROM orders o
+                JOIN users u ON o.user_id = u.id
+                WHERE o.toko_id = ?" . $filter_tanggal . "
+                ORDER BY o.id DESC";
+        $stmt = $conn->prepare($sql);
+        if($filter_tanggal != ""){
+            $stmt->bind_param("i" . $types, $toko_id, ...$params);
+        } else {
+            $stmt->bind_param("i", $toko_id);
+        }
+        $stmt->execute();
+        return $stmt->get_result();
+    }
+
+    $orders_toko1 = getDetailOrders($conn, 1, $filter_tanggal, $params, $types);
+    $orders_toko2 = getDetailOrders($conn, 2, $filter_tanggal, $params, $types);
+
+    $periode_label = ($tanggal_mulai && $tanggal_selesai) 
+        ? $tanggal_mulai . "_sd_" . $tanggal_selesai 
+        : "semua_waktu";
+    $filename = "laporan_pendapatan_semua_toko_" . $periode_label . ".xls";
+
+    header("Content-Type: application/vnd.ms-excel; charset=UTF-8");
+    header("Content-Disposition: attachment; filename=\"$filename\"");
+    header("Pragma: no-cache");
+    header("Expires: 0");
+    ?>
+    <table border="1">
+        <tr>
+            <th colspan="6" style="font-size:16px; font-weight:bold;">
+                Laporan Pendapatan - Semua Toko
+                <?php if($tanggal_mulai && $tanggal_selesai): ?>
+                    (<?php echo htmlspecialchars($tanggal_mulai); ?> s/d <?php echo htmlspecialchars($tanggal_selesai); ?>)
+                <?php else: ?>
+                    (Semua Waktu)
+                <?php endif; ?>
+            </th>
+        </tr>
+        <tr><td colspan="6"></td></tr>
+        <tr>
+            <th colspan="6" style="background:#EE6C4D; color:white;">RINGKASAN</th>
+        </tr>
+        <tr>
+            <td>Pendapatan Toko 1</td>
+            <td colspan="5"><?php echo $toko1_pendapatan; ?></td>
+        </tr>
+        <tr>
+            <td>Pendapatan Toko 2</td>
+            <td colspan="5"><?php echo $toko2_pendapatan; ?></td>
+        </tr>
+        <tr>
+            <th>Total Pendapatan</th>
+            <th colspan="5"><?php echo $total_pendapatan; ?></th>
+        </tr>
+        <tr><td colspan="6"></td></tr>
+
+        <!-- DETAIL TOKO 1 -->
+        <tr>
+            <th colspan="6" style="background:#EE6C4D; color:white;">DETAIL PESANAN - TOKO 1</th>
+        </tr>
+        <tr>
+            <th>ID Order</th>
+            <th>Customer</th>
+            <th>Total Harga</th>
+            <th>Status</th>
+            <th>Metode Pembayaran</th>
+            <th>Tanggal</th>
+        </tr>
+        <?php if($orders_toko1->num_rows > 0): ?>
+            <?php while($row = $orders_toko1->fetch_assoc()): ?>
+            <tr>
+                <td>#<?php echo str_pad($row['id'], 6, '0', STR_PAD_LEFT); ?></td>
+                <td><?php echo htmlspecialchars($row['customer_name']); ?></td>
+                <td><?php echo $row['total_harga']; ?></td>
+                <td><?php echo htmlspecialchars($row['status']); ?></td>
+                <td><?php echo htmlspecialchars($row['metode_pembayaran']); ?></td>
+                <td><?php echo $row['created_at']; ?></td>
+            </tr>
+            <?php endwhile; ?>
+        <?php else: ?>
+            <tr><td colspan="6">Tidak ada data</td></tr>
+        <?php endif; ?>
+        <tr><td colspan="6"></td></tr>
+
+        <!-- DETAIL TOKO 2 -->
+        <tr>
+            <th colspan="6" style="background:#2196f3; color:white;">DETAIL PESANAN - TOKO 2</th>
+        </tr>
+        <tr>
+            <th>ID Order</th>
+            <th>Customer</th>
+            <th>Total Harga</th>
+            <th>Status</th>
+            <th>Metode Pembayaran</th>
+            <th>Tanggal</th>
+        </tr>
+        <?php if($orders_toko2->num_rows > 0): ?>
+            <?php while($row = $orders_toko2->fetch_assoc()): ?>
+            <tr>
+                <td>#<?php echo str_pad($row['id'], 6, '0', STR_PAD_LEFT); ?></td>
+                <td><?php echo htmlspecialchars($row['customer_name']); ?></td>
+                <td><?php echo $row['total_harga']; ?></td>
+                <td><?php echo htmlspecialchars($row['status']); ?></td>
+                <td><?php echo htmlspecialchars($row['metode_pembayaran']); ?></td>
+                <td><?php echo $row['created_at']; ?></td>
+            </tr>
+            <?php endwhile; ?>
+        <?php else: ?>
+            <tr><td colspan="6">Tidak ada data</td></tr>
+        <?php endif; ?>
+    </table>
+    <?php
+    exit; // penting: hentikan eksekusi supaya HTML dashboard di bawah tidak ikut ter-render
+}
 ?>
 
 <!DOCTYPE html>
@@ -92,7 +214,6 @@ $total_pendapatan = $toko1_pendapatan + $toko2_pendapatan;
             width: 100%;
         }
 
-        /* ===== HEADER ===== */
         .header {
             background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
             padding: 25px 35px;
@@ -147,7 +268,6 @@ $total_pendapatan = $toko1_pendapatan + $toko2_pendapatan;
             transform: translateY(-2px);
         }
 
-        /* ===== FILTER TANGGAL ===== */
         .filter-bar {
             background: white;
             padding: 20px 25px;
@@ -208,7 +328,23 @@ $total_pendapatan = $toko1_pendapatan + $toko2_pendapatan;
             align-items: center;
         }
 
-        /* ===== TOTAL PENDAPATAN BANNER ===== */
+        .btn-export {
+            background: #2ecc71;
+            color: white;
+            text-decoration: none;
+            padding: 11px 22px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-export:hover {
+            background: #27ae60;
+        }
+
         .total-pendapatan {
             background: linear-gradient(135deg, #11998e, #38ef7d);
             padding: 25px 30px;
@@ -246,7 +382,6 @@ $total_pendapatan = $toko1_pendapatan + $toko2_pendapatan;
             font-size: 26px;
         }
 
-        /* ===== SUBTITLE ===== */
         .subtitle {
             text-align: center;
             color: #555;
@@ -260,14 +395,12 @@ $total_pendapatan = $toko1_pendapatan + $toko2_pendapatan;
             margin-right: 8px;
         }
 
-        /* ===== TOKO GRID ===== */
         .toko-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 30px;
         }
 
-        /* ===== TOKO CARD ===== */
         .toko-card {
             background: white;
             border-radius: 24px;
@@ -301,7 +434,6 @@ $total_pendapatan = $toko1_pendapatan + $toko2_pendapatan;
             box-shadow: 0 20px 50px rgba(0,0,0,0.12);
         }
 
-        /* ===== TOKO ICON ===== */
         .toko-icon {
             width: 80px;
             height: 80px;
@@ -341,7 +473,6 @@ $total_pendapatan = $toko1_pendapatan + $toko2_pendapatan;
             font-weight: 400;
         }
 
-        /* ===== PENDAPATAN TOKO ===== */
         .pendapatan-toko {
             background: #f0fdf9;
             border: 1.5px solid #b8f0dd;
@@ -365,7 +496,6 @@ $total_pendapatan = $toko1_pendapatan + $toko2_pendapatan;
             margin-top: 4px;
         }
 
-        /* ===== STATS ===== */
         .toko-stats {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -399,7 +529,6 @@ $total_pendapatan = $toko1_pendapatan + $toko2_pendapatan;
             letter-spacing: 0.5px;
         }
 
-        /* ===== BUTTON KELOLA ===== */
         .btn-kelola {
             display: inline-block;
             padding: 12px 40px;
@@ -444,7 +573,6 @@ $total_pendapatan = $toko1_pendapatan + $toko2_pendapatan;
             transform: translateX(4px);
         }
 
-        /* ===== RESPONSIVE ===== */
         @media (max-width: 768px) {
             .toko-grid {
                 grid-template-columns: 1fr;
@@ -515,7 +643,7 @@ $total_pendapatan = $toko1_pendapatan + $toko2_pendapatan;
         </div>
     </div>
 
-    <!-- FILTER TANGGAL PENDAPATAN -->
+    <!-- FILTER TANGGAL PENDAPATAN + EXPORT -->
     <form method="GET" class="filter-bar">
         <div class="filter-group">
             <label><i class="fa-regular fa-calendar"></i> Dari Tanggal</label>
@@ -533,6 +661,9 @@ $total_pendapatan = $toko1_pendapatan + $toko2_pendapatan;
                 <i class="fa-solid fa-rotate-left"></i> Reset
             </a>
         <?php endif; ?>
+        <a href="index.php?export=1&tanggal_mulai=<?php echo urlencode($tanggal_mulai); ?>&tanggal_selesai=<?php echo urlencode($tanggal_selesai); ?>" class="btn-export">
+            <i class="fa-solid fa-file-excel"></i> Export ke Excel
+        </a>
     </form>
 
     <!-- TOTAL PENDAPATAN SELURUH TOKO -->
